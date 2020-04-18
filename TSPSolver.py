@@ -14,6 +14,7 @@ import numpy as np
 from TSPClasses import *
 import heapq as hq
 import itertools
+from operator import itemgetter
 
 
 class TSPSolver:
@@ -150,19 +151,29 @@ class TSPSolver:
         # then pick a node. calculate the reduced cost matrix (RCM) for it which returns the lowerbound.
         start = self.init_RCM(ncities)
         # init returns a tuple of [lower bound, rcm, and route]
-        start[2] = cities[0]
+        start[2].append(cities[0])
         stateq = [start]
         while not foundTour and stateq.__len__() != 0:
+            # pop state off of the queue
+            next_state = hq.heappop(stateq)
+            # compare lowerbound to BSSF and ditch it if necessary
+            if next_state[0] > bssf:
+                continue
+            next_city = next_state[2][-1]
+            new_states = []
+            # follow each edge and update RCM and update the lowerbound for each new state.
             # TODO: Update RCM
-            # give it the current state, with the next city ID, and BSSF
-            next_state = stateq.pop()
-            next_state_city = next_state[0]
-
-        # compare lowerbound to BSSF and prune if necessary
-        # push new states onto the queue
-        # pop state off of the queue
-        # compare lowerbound to BSSF and ditch it if necessary
-        # follow each edge and update RCM and update the lowerbound for each new state.
+            for dest in range(ncities):
+                # give it the current state, with the next city ID, and BSSF
+                if next_city.costTo(cities[dest]) != np.inf:
+                    new_state = self.update_RCM(next_state, cities[dest], bssf, ncities)
+                    if new_state is not None:
+                        new_states.append(new_state)
+            new_states.sort(key=itemgetter[0])
+            # push new states onto the queue
+            for next in new_states:
+                popped = new_states.pop(0)
+                hq.heappush(stateq, popped)
         # Repeat until the queue is empty.
 
     ''' <summary>
@@ -181,6 +192,7 @@ class TSPSolver:
             Row is the source and cols are the edges.
         '''
         # TODO: create a np_calculateEdges that returns a np array
+
     def calculateEdges(self, size):
         cities = self._scenario.getCities()
         distances = [[np.inf] * size for x in range(size)]
@@ -197,29 +209,27 @@ class TSPSolver:
         smallest_of_each_col = np.amin(rcm, 0)
         for j in range(size):
             small_num = smallest_of_each_col[j]
+            lower_bound += small_num
             for i in range(size):
                 val = rcm[i][j]
                 if val == np.inf:
                     continue
                 elif val >= small_num:
-                    lower_bound += small_num
                     rcm[i][j] -= small_num
                 else:
-                    lower_bound += val
                     rcm[i][j] = 0
         smallest_of_each_row = np.amin(rcm, 1)
         # reduce rows
         for i in range(size):
             small_num = smallest_of_each_row[i]
+            lower_bound += small_num
             for j in range(size):
                 val = rcm[i][j]
                 if val == np.inf:
                     continue
                 elif val >= small_num:
-                    lower_bound += small_num
                     rcm[i][j] -= small_num
                 else:
-                    lower_bound += val
                     rcm[i][j] = 0
 
         return [lower_bound, rcm, []]
@@ -228,14 +238,18 @@ class TSPSolver:
         lower_bound = state[0]
         rcm = state[1]
         route = state[2]
-        from_city = route[-1].getIndex()
-        to_city = next_city.getIndex()
-        lower_bound += (rcm[from_city][to_city])
+        from_city = route[-1]
+        from_city_id = from_city.getIndex()
+        to_city_id = next_city.getIndex()
+        lower_bound += (rcm[from_city_id][to_city_id])
+        # compare lowerbound to BSSF and prune if necessary
+        lower_bound += rcm[from_city_id][to_city_id]
         if lower_bound >= bssf:
             return None
+
         for i in range(size):
-            rcm[from_city][i] = np.inf
-            rcm[next_city][i] = np.inf
+            rcm[from_city_id][i] = np.inf
+            rcm[i][to_city_id] = np.inf
         route.append(next_city)
 
         return [lower_bound, rcm, route]
