@@ -17,6 +17,7 @@ import itertools
 from operator import itemgetter
 
 
+
 class TSPSolver:
     def __init__(self, gui_view):
         self._scenario = None
@@ -149,10 +150,10 @@ class TSPSolver:
         start_time = time.time()
         # Initialize rcm
         # then pick a node. calculate the reduced cost matrix (RCM) for it which returns the lowerbound.
-        start = self.init_RCM(ncities)
+        start_state = self.init_RCM(ncities)
         # init returns a tuple of [lower bound, rcm, and route]
-        start[2].append(cities[0])
-        stateq = [start]
+        start_state.add_to_route(cities[0])
+        stateq = [start_state]
         while not foundTour and stateq.__len__() != 0:
             # pop state off of the queue
             next_state = hq.heappop(stateq)
@@ -169,7 +170,7 @@ class TSPSolver:
                     new_state = self.update_RCM(next_state, cities[dest], bssf, ncities)
                     if new_state is not None:
                         new_states.append(new_state)
-            new_states.sort(key=itemgetter[0])
+            new_states.sort(key=lambda x x._lower_bound)
             # push new states onto the queue
             for next in new_states:
                 popped = new_states.pop(0)
@@ -231,13 +232,13 @@ class TSPSolver:
                     rcm[i][j] -= small_num
                 else:
                     rcm[i][j] = 0
-
-        return [lower_bound, rcm, []]
+        return_state = State(lower_bound, rcm, [])
+        return return_state
 
     def update_RCM(self, state, next_city, bssf, size):
-        lower_bound = state[0]
-        rcm = state[1]
-        route = state[2]
+        lower_bound = state._lower_bound
+        rcm = state._rcm
+        route = state._route
         from_city = route[-1]
         from_city_id = from_city.getIndex()
         to_city_id = next_city.getIndex()
@@ -251,5 +252,5 @@ class TSPSolver:
             rcm[from_city_id][i] = np.inf
             rcm[i][to_city_id] = np.inf
         route.append(next_city)
-
-        return [lower_bound, rcm, route]
+        ret_state = State(lower_bound, rcm, route)
+        return ret_state

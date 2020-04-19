@@ -6,6 +6,14 @@ import numpy as np
 import random
 import time
 
+class State:
+	def __init__(self, bound, rcm, route):
+		self._lower_bound = bound
+		self._rcm = rcm
+		self._route = route
+
+	def add_to_route(self, city):
+		self._route.append(city)
 
 class TSPSolution:
 	def __init__(self, listOfCities):
