@@ -10,12 +10,10 @@ else:
     raise Exception('Unsupported Version of PyQt: {}'.format(PYQT_VER))
 
 import time
-import numpy as np
+# import numpy as np
 from TSPClasses import *
-import heapq as hq
-import itertools
-from operator import itemgetter
-
+from queue import LifoQueue
+import copy
 
 
 class TSPSolver:
@@ -139,6 +137,9 @@ class TSPSolver:
         '''
 
     def branchAndBound(self, time_allowance=60.0):
+        pruned = 0
+        max_states = 0
+        total_states = 0
         # TODO: implement this function
         results = {}
         cities = self._scenario.getCities()
@@ -146,46 +147,80 @@ class TSPSolver:
         foundTour = False
         count = 0
         # Firstly, run the greedy algorithm to get the result. That solution is the BSSF
-        bssf = self.greedy()['soln'].cost
+        greedy_resuts = self.greedy()
+        bssf = greedy_resuts['soln'].cost
+        best_solution = copy.copy(greedy_resuts['soln'])
         start_time = time.time()
         # Initialize rcm
         # then pick a node. calculate the reduced cost matrix (RCM) for it which returns the lowerbound.
         start_state = self.init_RCM(ncities)
         # init returns a tuple of [lower bound, rcm, and route]
-        start_state.add_to_route(cities[0])
-        stateq = [start_state]
-        while not foundTour and stateq.__len__() != 0:
+        start_state[2].append(cities[0])
+        stateq = LifoQueue()
+        stateq.put(start_state)
+        # and time.time() - start_time < time_allowance
+        while stateq.qsize() != 0 and time.time() - start_time < time_allowance:
             # pop state off of the queue
-            next_state = hq.heappop(stateq)
-            # compare lowerbound to BSSF and ditch it if necessary
-            if next_state[0] > bssf:
+            curr_state = stateq.get()
+
+            # compare lower_bound to BSSF and ditch it if necessary
+            if curr_state[0] > best_solution.cost:
+                pruned += 1
                 continue
-            next_city = next_state[2][-1]
+            curr_city = curr_state[2][-1]
+            curr_city_id = curr_city.getIndex()
             new_states = []
-            # follow each edge and update RCM and update the lowerbound for each new state.
-            # TODO: Update RCM
+            # follow each edge and update
+            # RCM and update the lowerbound for each new state.
+
             for dest in range(ncities):
                 # give it the current state, with the next city ID, and BSSF
-                if next_city.costTo(cities[dest]) != np.inf:
-                    new_state = self.update_RCM(next_state, cities[dest], bssf, ncities)
+
+                cost = curr_state[1][curr_city_id][dest]
+                if cost != np.inf:
+                    new_state = update_RCM(curr_state, cities[dest], cost, bssf, ncities)
+                    total_states += 1
                     if new_state is not None:
-                        new_states.append(new_state)
-            new_states.sort(key=lambda x x._lower_bound)
+                        if len(new_state[2]) == ncities:
+                            curr_soln = TSPSolution(new_state[2])
+                            if curr_soln.cost != np.inf:
+                                if curr_soln.cost < best_solution.cost:
+                                    best_solution = copy.copy(curr_soln)
+                                count += 1
+                                foundTour = True
+                                continue
+                            else:
+                                pruned += 1
+                        else:
+                            new_states.append(new_state)
+                    else:
+                        pruned += 1
+            new_states.sort(key=lambda new_states: new_states[0])
             # push new states onto the queue
-            for next in new_states:
-                popped = new_states.pop(0)
-                hq.heappush(stateq, popped)
+            while len(new_states) != 0:
+                popped = new_states.pop()
+                stateq.put(popped)
+            if stateq.qsize() > max_states:
+                max_states = stateq.qsize()
         # Repeat until the queue is empty.
+        end_time = time.time()
+        results['cost'] = best_solution.cost if foundTour else bssf
+        results['time'] = end_time - start_time
+        results['count'] = count
+        results['soln'] = best_solution
+        results['max'] = max_states
+        results['total'] = total_states
+        results['pruned'] = pruned
+        return results
 
     ''' <summary>
-		This is the entry point for the algorithm you'll write for your group project.
-		</summary>
-		<returns>results dictionary for GUI that contains three ints: cost of best solution, 
-		time spent to find best solution, total number of solutions found during search, the 
-		best solution found.  You may use the other three field however you like.
-		algorithm</returns> 
-	'''
-
+    This is the entry point for the algorithm you'll write for your group project.
+    </summary>
+    <returns>results dictionary for GUI that contains three ints: cost of best solution, 
+    time spent to find best solution, total number of solutions found during search, the 
+    best solution found.  You may use the other three field however you like.
+    algorithm</returns> 
+    '''
     def fancy(self, time_allowance=60.0):
         pass
 
@@ -206,51 +241,62 @@ class TSPSolver:
         distances = self.calculateEdges(size)
         rcm = np.array([x for x in distances])
         lower_bound = 0
-        # reduce cols
-        smallest_of_each_col = np.amin(rcm, 0)
-        for j in range(size):
-            small_num = smallest_of_each_col[j]
-            lower_bound += small_num
-            for i in range(size):
-                val = rcm[i][j]
-                if val == np.inf:
-                    continue
-                elif val >= small_num:
-                    rcm[i][j] -= small_num
-                else:
-                    rcm[i][j] = 0
-        smallest_of_each_row = np.amin(rcm, 1)
-        # reduce rows
-        for i in range(size):
-            small_num = smallest_of_each_row[i]
-            lower_bound += small_num
-            for j in range(size):
-                val = rcm[i][j]
-                if val == np.inf:
-                    continue
-                elif val >= small_num:
-                    rcm[i][j] -= small_num
-                else:
-                    rcm[i][j] = 0
-        return_state = State(lower_bound, rcm, [])
+
+        lower_bound = reduce_rows(lower_bound, rcm, size)
+        lower_bound = reduce_cols(lower_bound, rcm, size)
+
+        return_state = [lower_bound, rcm, []]
         return return_state
 
-    def update_RCM(self, state, next_city, bssf, size):
-        lower_bound = state._lower_bound
-        rcm = state._rcm
-        route = state._route
-        from_city = route[-1]
-        from_city_id = from_city.getIndex()
-        to_city_id = next_city.getIndex()
-        lower_bound += (rcm[from_city_id][to_city_id])
-        # compare lowerbound to BSSF and prune if necessary
-        lower_bound += rcm[from_city_id][to_city_id]
-        if lower_bound >= bssf:
-            return None
 
-        for i in range(size):
-            rcm[from_city_id][i] = np.inf
-            rcm[i][to_city_id] = np.inf
-        route.append(next_city)
-        ret_state = State(lower_bound, rcm, route)
-        return ret_state
+def update_RCM(state, next_city, cost, bssf, size):
+    lower_bound = copy.copy(state[0])
+    rcm = copy.copy(state[1])
+    route = copy.copy(state[2])
+    from_city = route[-1]
+    from_city_id = from_city.getIndex()
+    to_city_id = next_city.getIndex()
+    lower_bound += cost
+
+    for i in range(size):
+        rcm[from_city_id][i] = np.inf
+        rcm[i][to_city_id] = np.inf
+
+    # set the back edge to inf.
+    rcm[to_city_id][from_city_id] = np.inf
+    # Reduce cols and rows again.
+    lower_bound = reduce_cols(lower_bound, rcm, size)
+    lower_bound = reduce_rows(lower_bound, rcm, size)
+
+    # compare lowerbound to BSSF and prune if necessary
+    if lower_bound >= bssf:
+        return None
+
+    route.append(copy.copy(next_city))
+    ret_state = [lower_bound, rcm, route]
+    return ret_state
+
+
+def reduce_rows(lower_bound, rcm, size):
+    smallest_of_each_row = np.amin(rcm, 1)
+    # reduce rows
+    for i in range(size):
+        small_num = smallest_of_each_row[i]
+        if small_num > 0 and small_num != np.inf:
+            lower_bound += small_num
+            for j in range(size):
+                rcm[i][j] -= small_num
+    return lower_bound
+
+
+def reduce_cols(lower_bound, rcm, size):
+    # reduce cols
+    smallest_of_each_col = np.amin(rcm, 0)
+    for j in range(size):
+        small_num = smallest_of_each_col[j]
+        if small_num > 0 and small_num != np.inf:
+            lower_bound += small_num
+            for i in range(size):
+                rcm[i][j] -= small_num
+    return lower_bound
+
