@@ -14,6 +14,7 @@ import time
 from TSPClasses import *
 from queue import LifoQueue
 import copy
+from random import randint
 
 
 class TSPSolver:
@@ -222,12 +223,81 @@ class TSPSolver:
     algorithm</returns> 
     '''
     def fancy(self, time_allowance=60.0):
-        pass
+        results = {}
+        pop_size = 25
+        generations = 50
+        start_time = time.time()
+        population = self.initializePopulation(pop_size)
 
-        ''' Use this method to calculate the edges of the graph. 
-            Row is the source and cols are the edges.
-        '''
-        # TODO: create a np_calculateEdges that returns a np array
+        # The number of generations/iterations of the genetic algorithm
+        for i in range(generations):
+            population = self.createNewPopulation(population)
+
+        # Sort population by cost
+        population.sort()
+        end_time = time.time()
+        results['cost'] = population[0][0]
+        results['time'] = end_time - start_time
+        results['count'] = pop_size
+        results['soln'] = population[0][1]
+        results['max'] = None
+        results['total'] = None
+        results['pruned'] = None
+        return results
+
+    def initializePopulation(self, pop_size):
+        init_pop = []
+        for i in range(pop_size):
+            default_results = self.defaultRandomTour()
+            # Tuple of (cost, solution)
+            init_pop.append((default_results['soln'].cost, default_results['soln']))
+        return init_pop
+
+    def mutateGene(self, soln):
+        path = soln
+        pop_size = len(path)
+        # Percentage of mutations performed on the solution
+        mutation_rate = 0.2
+        # Number of mutations to make on the solution
+        num_of_mutations = np.ceil(pop_size * mutation_rate)
+        i = 0
+        while i < num_of_mutations:
+            # Randomly pick two cities
+            rand_num_1 = randint(0, pop_size)
+            rand_num_2 = randint(0, pop_size)
+            if rand_num_1 != rand_num_2:
+                # Swap cities
+                index1 = path.index(rand_num_1)
+                index2 = path.index(rand_num_2)
+                path[index1], path[index2] = path[index2], path[index1]
+                i += 1
+        return path
+
+    def calculateFitness(self, soln):
+        results = TSPSolution(soln)
+        return results.cost
+
+    def createNewPopulation(self, init_pop):
+        new_pop = []
+        pop_size = len(init_pop)
+        # To create a new population of equal size
+        for i in range(pop_size):
+            # Mutate parent
+            child_soln = self.mutateGene(init_pop[i][1])
+            # Calculate Fitness
+            child_cost = self.calculateFitness(child_soln)
+            # Add the parent or the child with the better cost
+            if child_cost < init_pop[i][1]:
+                # Tuple of (cost, solution)
+                new_pop.append((child_cost, child_soln))
+            else:
+                new_pop.append(init_pop[i])
+        return new_pop
+
+    ''' Use this method to calculate the edges of the graph. 
+        Row is the source and cols are the edges.
+    '''
+    # TODO: create a np_calculateEdges that returns a np array
 
     def calculateEdges(self, size):
         cities = self._scenario.getCities()
