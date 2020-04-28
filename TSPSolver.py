@@ -244,7 +244,7 @@ class TSPSolver:
         results['total'] = None
         results['pruned'] = None
         return results
-# TODO:
+# TODO: refactor to utilize the TSPSolution object
     def initializePopulation(self, pop_size):
         init_pop = []
         for i in range(pop_size):
