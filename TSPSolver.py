@@ -224,7 +224,10 @@ class TSPSolver:
     '''
     def fancy(self, time_allowance=60.0):
         results = {}
-        pop_size = 10
+        cities = self._scenario.getCities()
+        ncities = len(cities)
+        pop_size = 25
+
         generations = 50
         start_time = time.time()
         population = self.initializePopulation(pop_size)
@@ -245,7 +248,6 @@ class TSPSolver:
         results['pruned'] = None
         return results
 
-# TODO: refactor to utilize the TSPSolution object
     def initializePopulation(self, pop_size):
         init_pop = []
         for i in range(pop_size):
