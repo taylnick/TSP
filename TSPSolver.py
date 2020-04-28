@@ -236,10 +236,10 @@ class TSPSolver:
         # Sort population by cost
         population.sort()
         end_time = time.time()
-        results['cost'] = population[0][0]
+        results['cost'] = population[0].cost
         results['time'] = end_time - start_time
         results['count'] = pop_size
-        results['soln'] = population[0][1]
+        results['soln'] = population[0].route
         results['max'] = None
         results['total'] = None
         results['pruned'] = None
@@ -249,13 +249,13 @@ class TSPSolver:
         init_pop = []
         for i in range(pop_size):
             default_results = self.defaultRandomTour()
-            # Tuple of (cost, solution)
-            init_pop.append((default_results['soln'].cost, default_results['soln']))
+            # Tuple of (cost, solution) # TSPSolution object
+            init_pop.append(TSPSolution(default_results['soln'].route))
         return init_pop
 
-    def mutateGene(self, soln):
-        path = soln
-        pop_size = len(path)
+    def mutateGene(self, tsp_soln):
+        soln = tsp_soln.route
+        pop_size = len(soln)
         # Percentage of mutations performed on the solution
         mutation_rate = 0.2
         # Number of mutations to make on the solution
@@ -267,11 +267,11 @@ class TSPSolver:
             rand_num_2 = randint(0, pop_size)
             if rand_num_1 != rand_num_2:
                 # Swap cities
-                index1 = path.index(rand_num_1)
-                index2 = path.index(rand_num_2)
-                path[index1], path[index2] = path[index2], path[index1]
+                index1 = soln.index(rand_num_1)
+                index2 = soln.index(rand_num_2)
+                soln[index1], soln[index2] = soln[index2], soln[index1]
                 i += 1
-        return path
+        return soln
 
     def calculateFitness(self, soln):
         results = TSPSolution(soln)
@@ -283,15 +283,15 @@ class TSPSolver:
         # To create a new population of equal size
         for i in range(pop_size):
             # Mutate parent
-            child_soln = self.mutateGene(init_pop[i][1])
+            child_soln = self.mutateGene(init_pop[i].route)
             # Calculate Fitness
             child_cost = self.calculateFitness(child_soln)
             # Add the parent or the child with the better cost
-            if child_cost < init_pop[i][1]:
+            if child_cost < init_pop[i].route:
                 # Tuple of (cost, solution)
-                new_pop.append((child_cost, child_soln))
+                new_pop.append(TSPSolution(child_soln))
             else:
-                new_pop.append(init_pop[i])
+                new_pop.append(TSPSolution(init_pop[i].route))
         return new_pop
 
     ''' Use this method to calculate the edges of the graph. 
