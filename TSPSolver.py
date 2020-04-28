@@ -224,7 +224,7 @@ class TSPSolver:
     '''
     def fancy(self, time_allowance=60.0):
         results = {}
-        pop_size = 25
+        pop_size = 10
         generations = 50
         start_time = time.time()
         population = self.initializePopulation(pop_size)
@@ -283,15 +283,16 @@ class TSPSolver:
         # To create a new population of equal size
         for i in range(pop_size):
             # Mutate parent
-            child_soln = self.mutateGene(init_pop[i])
-            # Calculate Fitness
-            child_cost = self.calculateFitness(child_soln)
-            # Add the parent or the child with the better cost
-            if child_cost < init_pop[i].cost:
-                # Tuple of (cost, solution)
-                new_pop.append(TSPSolution(child_soln))
-            else:
-                new_pop.append(TSPSolution(init_pop[i].route))
+            isFound = False
+            while not isFound:
+                child_soln = self.mutateGene(init_pop[i])
+                # Calculate Fitness
+                child_cost = self.calculateFitness(child_soln)
+                # Add the parent or the child with the better cost
+                if child_cost < init_pop[i].cost:
+                    # Tuple of (cost, solution)
+                    new_pop.append(TSPSolution(child_soln))
+                    isFound = True
         return new_pop
 
     ''' Use this method to calculate the edges of the graph. 
