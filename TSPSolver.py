@@ -268,9 +268,7 @@ class TSPSolver:
             rand_num_2 = randint(0, pop_size)
             if rand_num_1 != rand_num_2:
                 # Swap cities
-                index1 = soln.index(rand_num_1)
-                index2 = soln.index(rand_num_2)
-                soln[index1], soln[index2] = soln[index2], soln[index1]
+                soln[rand_num_1], soln[rand_num_2] = soln[rand_num_2], soln[rand_num_1]
                 i += 1
         return soln
 
@@ -284,15 +282,15 @@ class TSPSolver:
         # To create a new population of equal size
         for i in range(pop_size):
             # Mutate parent
-            child_soln = self.mutateGene(init_pop[i].route)
+            child_soln = self.mutateGene(init_pop[i])
             # Calculate Fitness
             child_cost = self.calculateFitness(child_soln)
             # Add the parent or the child with the better cost
-            if child_cost < init_pop[i].route:
+            if child_cost < init_pop[i].cost:
                 # Tuple of (cost, solution)
                 new_pop.append(TSPSolution(child_soln))
             else:
-                new_pop.append(TSPSolution(init_pop[i].route))
+                new_pop.append(TSPSolution(init_pop[i]))
         return new_pop
 
     ''' Use this method to calculate the edges of the graph. 
