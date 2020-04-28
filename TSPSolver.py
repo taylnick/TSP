@@ -244,7 +244,7 @@ class TSPSolver:
         results['total'] = None
         results['pruned'] = None
         return results
-
+# TODO: refactor to utilize the TSPSolution object
     def initializePopulation(self, pop_size):
         init_pop = []
         for i in range(pop_size):
@@ -256,6 +256,7 @@ class TSPSolver:
     def mutateGene(self, tsp_soln):
         soln = tsp_soln.route
         pop_size = len(soln)
+
         # Percentage of mutations performed on the solution
         mutation_rate = 0.2
         # Number of mutations to make on the solution
