@@ -264,8 +264,8 @@ class TSPSolver:
         i = 0
         while i < num_of_mutations:
             # Randomly pick two cities
-            rand_num_1 = randint(0, pop_size)
-            rand_num_2 = randint(0, pop_size)
+            rand_num_1 = randint(0, pop_size-1)
+            rand_num_2 = randint(0, pop_size-1)
             if rand_num_1 != rand_num_2:
                 # Swap cities
                 soln[rand_num_1], soln[rand_num_2] = soln[rand_num_2], soln[rand_num_1]
@@ -290,7 +290,7 @@ class TSPSolver:
                 # Tuple of (cost, solution)
                 new_pop.append(TSPSolution(child_soln))
             else:
-                new_pop.append(TSPSolution(init_pop[i]))
+                new_pop.append(TSPSolution(init_pop[i].route))
         return new_pop
 
     ''' Use this method to calculate the edges of the graph. 
