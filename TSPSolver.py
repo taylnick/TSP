@@ -244,7 +244,7 @@ class TSPSolver:
         results['total'] = None
         results['pruned'] = None
         return results
-
+# TODO:
     def initializePopulation(self, pop_size):
         init_pop = []
         for i in range(pop_size):
@@ -255,7 +255,7 @@ class TSPSolver:
 
     def mutateGene(self, soln):
         path = soln
-        pop_size = len(path)
+        pop_size = len(path.route)
         # Percentage of mutations performed on the solution
         mutation_rate = 0.2
         # Number of mutations to make on the solution
@@ -267,6 +267,7 @@ class TSPSolver:
             rand_num_2 = randint(0, pop_size)
             if rand_num_1 != rand_num_2:
                 # Swap cities
+                # TODO: update this to use the TSPSOlution object
                 index1 = path.index(rand_num_1)
                 index2 = path.index(rand_num_2)
                 path[index1], path[index2] = path[index2], path[index1]
