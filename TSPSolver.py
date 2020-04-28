@@ -234,16 +234,17 @@ class TSPSolver:
             population = self.createNewPopulation(population)
 
         # Sort population by cost
-        population.sort()
+        population.sort(key=lambda p: p.cost)
         end_time = time.time()
         results['cost'] = population[0].cost
         results['time'] = end_time - start_time
         results['count'] = pop_size
-        results['soln'] = population[0].route
+        results['soln'] = TSPSolution(population[0].route)
         results['max'] = None
         results['total'] = None
         results['pruned'] = None
         return results
+
 # TODO: refactor to utilize the TSPSolution object
     def initializePopulation(self, pop_size):
         init_pop = []
