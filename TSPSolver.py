@@ -242,7 +242,7 @@ class TSPSolver:
         # The number of generations/iterations of the genetic algorithm
         still_improving = True
         while still_improving and time.time() - start_time < time_allowance:
-            population = self.createNewPopulation(population, pop_size, bssf, past_gen_maxes)
+            population = self.createNewPopulation(population, pop_size, bssf, past_gen_maxes, time_allowance, start_time)
             # min_cost = min(population, key=attrgetter('cost'))
             still_improving = self.is_improving(population, past_gen_maxes)
 
@@ -308,23 +308,29 @@ class TSPSolver:
         results = TSPSolution(soln)
         return results.cost
 
-    def createNewPopulation(self, init_pop, pop_size, bssf, best_past):
+    def createNewPopulation(self, init_pop, pop_size, bssf, best_past, time_allowance, start_time):
         new_pop = []
 
         # To create a new population of equal size
         for i in range(pop_size):
-            parent = init_pop[i]
-            # Mutate parent
-            isFound = False
-            while not isFound:
-                child_soln = self.mutateGene(parent, pop_size)
-                # Calculate Fitness
-                child_cost = self.calculateFitness(child_soln)
-                # Add the parent or the child with the better cost
-                if child_cost < parent.cost:
-                    # Tuple of (cost, solution)
-                    new_pop.append(TSPSolution(child_soln))
-                    isFound = True
+            if time.time() - start_time < time_allowance:
+                parent = init_pop[i]
+                # Mutate parent
+                isFound = False
+                while not isFound:
+                    if time.time() - start_time < time_allowance:
+                        child_soln = self.mutateGene(parent, pop_size)
+                        # Calculate Fitness
+                        child_cost = self.calculateFitness(child_soln)
+                        # Add the parent or the child with the better cost
+                        if child_cost < parent.cost:
+                            # Tuple of (cost, solution)
+                            new_pop.append(TSPSolution(child_soln))
+                            isFound = True
+                    else:
+                        break
+            else:
+                return init_pop
         return new_pop
 
     ''' Use this method to calculate the edges of the graph. 
