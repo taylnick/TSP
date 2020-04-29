@@ -317,13 +317,13 @@ class TSPSolver:
                 isFound = False
                 while not isFound:
                     if time.time() - start_time < time_allowance:
-                        child_soln = self.mutateGene(parent, ncities)
+                        new_child_route = self.mutateGene(parent, ncities)
+                        child_soln = TSPSolution(new_child_route)
                         # Calculate Fitness
-                        child_cost = self.calculateFitness(child_soln)
+                        child_cost = child_soln.cost
                         # Add the parent or the child with the better cost
                         if child_cost < parent.cost:
-                            # Tuple of (cost, solution)
-                            new_pop.append(TSPSolution(child_soln))
+                            new_pop.append(child_soln)
                             isFound = True
                     else:
                         break
