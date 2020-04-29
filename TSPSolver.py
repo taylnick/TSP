@@ -242,7 +242,7 @@ class TSPSolver:
         # The number of generations/iterations of the genetic algorithm
         still_improving = True
         while still_improving and time.time() - start_time < time_allowance:
-            population = self.createNewPopulation(population, pop_size, bssf, past_gen_maxes, time_allowance, start_time)
+            population = self.createNewPopulation(population, pop_size, ncities, bssf, past_gen_maxes, time_allowance, start_time)
             # min_cost = min(population, key=attrgetter('cost'))
             still_improving = self.is_improving(population, past_gen_maxes)
 
@@ -286,18 +286,18 @@ class TSPSolver:
             init_pop.append(TSPSolution(default_results['soln'].route))
         return init_pop
 
-    def mutateGene(self, tsp_soln, pop_size):
+    def mutateGene(self, tsp_soln, ncities):
         soln = tsp_soln.route
 
         # Percentage of mutations performed on the solution
-        mutation_rate = 0.1
+        mutation_rate = 0.10
         # Number of mutations to make on the solution
-        num_of_mutations = np.ceil(pop_size * mutation_rate)
+        num_of_mutations = np.ceil(ncities * mutation_rate)
         i = 0
         while i < num_of_mutations:
             # Randomly pick two cities
-            rand_num_1 = randint(0, pop_size-1)
-            rand_num_2 = randint(0, pop_size-1)
+            rand_num_1 = randint(0, ncities-1)
+            rand_num_2 = randint(0, ncities-1)
             if rand_num_1 != rand_num_2:
                 # Swap cities
                 soln[rand_num_1], soln[rand_num_2] = soln[rand_num_2], soln[rand_num_1]
@@ -308,7 +308,7 @@ class TSPSolver:
         results = TSPSolution(soln)
         return results.cost
 
-    def createNewPopulation(self, init_pop, pop_size, bssf, best_past, time_allowance, start_time):
+    def createNewPopulation(self, init_pop, pop_size, ncities, bssf, best_past, time_allowance, start_time):
         new_pop = []
 
         # To create a new population of equal size
@@ -319,7 +319,7 @@ class TSPSolver:
                 isFound = False
                 while not isFound:
                     if time.time() - start_time < time_allowance:
-                        child_soln = self.mutateGene(parent, pop_size)
+                        child_soln = self.mutateGene(parent, ncities)
                         # Calculate Fitness
                         child_cost = self.calculateFitness(child_soln)
                         # Add the parent or the child with the better cost
