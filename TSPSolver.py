@@ -141,7 +141,7 @@ class TSPSolver:
         pruned = 0
         max_states = 0
         total_states = 0
-        # TODO: implement this function
+
         results = {}
         cities = self._scenario.getCities()
         ncities = len(cities)
@@ -226,15 +226,22 @@ class TSPSolver:
         results = {}
         cities = self._scenario.getCities()
         ncities = len(cities)
-        pop_size = 25
+        pop_size = 15
+        past_gen_maxes = [5]
 
         generations = 50
-        start_time = time.time()
         population = self.initializePopulation(pop_size)
+        # population.sort(key=lambda p: p.cost)
+        # TODO: use this or get rid of it
+        bssf = TSPSolution(population[0].route)
+        # past_gen_maxes.append(bssf)
+        start_time = time.time()
 
         # The number of generations/iterations of the genetic algorithm
-        for i in range(generations):
-            population = self.createNewPopulation(population)
+        still_improving = True
+        while still_improving and time.time() - start_time < time_allowance:
+            population = self.createNewPopulation(population, pop_size, bssf, past_gen_maxes)
+
 
         # Sort population by cost
         population.sort(key=lambda p: p.cost)
@@ -248,6 +255,12 @@ class TSPSolver:
         results['pruned'] = None
         return results
 
+    def is_improving(self, pop):
+        # TODO: implement this.
+        return pop[0].cost
+
+    '''Takes population size, makes random solutions. 
+        returns a list of TSPSolution objs'''
     def initializePopulation(self, pop_size):
         init_pop = []
         for i in range(pop_size):
@@ -256,9 +269,8 @@ class TSPSolver:
             init_pop.append(TSPSolution(default_results['soln'].route))
         return init_pop
 
-    def mutateGene(self, tsp_soln):
+    def mutateGene(self, tsp_soln, pop_size):
         soln = tsp_soln.route
-        pop_size = len(soln)
 
         # Percentage of mutations performed on the solution
         mutation_rate = 0.2
@@ -279,19 +291,20 @@ class TSPSolver:
         results = TSPSolution(soln)
         return results.cost
 
-    def createNewPopulation(self, init_pop):
+    def createNewPopulation(self, init_pop, pop_size, bssf, best_past):
         new_pop = []
-        pop_size = len(init_pop)
+
         # To create a new population of equal size
         for i in range(pop_size):
+            parent = init_pop[i]
             # Mutate parent
             isFound = False
             while not isFound:
-                child_soln = self.mutateGene(init_pop[i])
+                child_soln = self.mutateGene(parent, pop_size)
                 # Calculate Fitness
                 child_cost = self.calculateFitness(child_soln)
                 # Add the parent or the child with the better cost
-                if child_cost < init_pop[i].cost:
+                if child_cost < parent.cost:
                     # Tuple of (cost, solution)
                     new_pop.append(TSPSolution(child_soln))
                     isFound = True
@@ -300,8 +313,6 @@ class TSPSolver:
     ''' Use this method to calculate the edges of the graph. 
         Row is the source and cols are the edges.
     '''
-    # TODO: create a np_calculateEdges that returns a np array
-
     def calculateEdges(self, size):
         cities = self._scenario.getCities()
         distances = [[np.inf] * size for x in range(size)]
