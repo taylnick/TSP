@@ -290,7 +290,7 @@ class TSPSolver:
         soln = tsp_soln.route
 
         # Percentage of mutations performed on the solution
-        mutation_rate = 0.2
+        mutation_rate = 0.1
         # Number of mutations to make on the solution
         num_of_mutations = np.ceil(pop_size * mutation_rate)
         i = 0
