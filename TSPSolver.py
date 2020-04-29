@@ -15,6 +15,8 @@ from TSPClasses import *
 from queue import LifoQueue
 import copy
 from random import randint
+from operator import attrgetter
+from statistics import mean
 
 
 class TSPSolver:
@@ -231,16 +233,20 @@ class TSPSolver:
 
         generations = 50
         population = self.initializePopulation(pop_size)
-        # population.sort(key=lambda p: p.cost)
+        population.sort(key=lambda p: p.cost)
         # TODO: use this or get rid of it
         bssf = TSPSolution(population[0].route)
-        # past_gen_maxes.append(bssf)
+        past_gen_maxes.append(bssf)
         start_time = time.time()
 
         # The number of generations/iterations of the genetic algorithm
         still_improving = True
         while still_improving and time.time() - start_time < time_allowance:
             population = self.createNewPopulation(population, pop_size, bssf, past_gen_maxes)
+            # min_cost = min(population, key=attrgetter('cost'))
+            still_improving = self.is_improving(population, past_gen_maxes)
+
+
 
 
         # Sort population by cost
@@ -255,8 +261,19 @@ class TSPSolver:
         results['pruned'] = None
         return results
 
-    def is_improving(self, pop):
-        # TODO: implement this.
+    def is_improving(self, pop, max_list):
+
+        # pop.sort(key=lambda p: p.cost)
+        # min_this_iteration = pop[0]
+        # if len(max_list) < 5:
+        #     max_list.append(min_this_iteration)
+        # else:
+        #     max_list.sort(key=lambda l: l.cost)
+        #     if min_this_iteration.cost < max_list[-1].cost:
+        #         max_list.pop(-1)
+        #         max_list.append(min_this_iteration)
+        # average_cost = mean(sol.cost for sol in max_list)
+        # if average_cost < (max_list[])
         return pop[0].cost
 
     '''Takes population size, makes random solutions. 
