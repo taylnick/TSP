@@ -280,17 +280,18 @@ class TSPSolver:
         returns a list of TSPSolution objs'''
     def initializePopulation(self, pop_size):
         init_pop = []
-        for i in range(pop_size):
+        for i in range(pop_size*2):
             default_results = self.defaultRandomTour()
             # Tuple of (cost, solution) # TSPSolution object
             init_pop.append(TSPSolution(default_results['soln'].route))
-        return init_pop
+        init_pop.sort(key=lambda l: l.cost)
+        return init_pop[:pop_size]
 
     def mutateGene(self, tsp_soln, ncities):
         soln = tsp_soln.route
 
         # Percentage of mutations performed on the solution
-        mutation_rate = 0.10
+        mutation_rate = 0.20
         # Number of mutations to make on the solution
         num_of_mutations = np.ceil(ncities * mutation_rate)
         i = 0
