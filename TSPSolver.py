@@ -244,7 +244,7 @@ class TSPSolver:
         stagnant_generations = 0
         prev_generation_leader = np.inf
         # The number of generations/iterations of the genetic algorithm
-        while time.time() - start_time < time_allowance:
+        while  stagnant_generations < 500 and time.time() - start_time < time_allowance:
             # cull population back down to size.
             population = self.cullPopulation(population, pop_size, elite_size)
             # Make some chilluns
