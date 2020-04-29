@@ -229,22 +229,23 @@ class TSPSolver:
         cities = self._scenario.getCities()
         ncities = len(cities)
         pop_size = 15
-        past_gen_maxes = [5]
+        past_best = [np.inf] * 5
+        deltas = []
 
         generations = 50
         population = self.initializePopulation(pop_size)
         population.sort(key=lambda p: p.cost)
         # TODO: use this or get rid of it
         bssf = TSPSolution(population[0].route)
-        past_gen_maxes.append(bssf)
+        past_best.append(bssf)
         start_time = time.time()
 
         # The number of generations/iterations of the genetic algorithm
         still_improving = True
         while still_improving and time.time() - start_time < time_allowance:
-            population = self.createNewPopulation(population, pop_size, bssf, past_gen_maxes)
+            population = self.createNewPopulation(population, pop_size, bssf, ncities)
             # min_cost = min(population, key=attrgetter('cost'))
-            still_improving = self.is_improving(population, past_gen_maxes)
+            still_improving = self.is_improving(population, past_best, deltas)
 
 
 
@@ -261,7 +262,20 @@ class TSPSolver:
         results['pruned'] = None
         return results
 
-    def is_improving(self, pop, max_list):
+    def is_improving(self, pop, max_list, deltas):
+        pop.sort(key=lambda p: p.cost)
+
+        if max_list.__contains__(np.inf):
+            max_list.remove(np.inf)
+            max_list.append(pop[0])
+            return True
+        max_list.sort(key=lambda x: x.cost)
+        delta = (max_list[-1].cost - pop[0].cost) / pop[0].cost
+        deltas.append(delta)
+        if sum(deltas[-3:]) > .3:
+            return True
+        else:
+            return False
 
         # pop.sort(key=lambda p: p.cost)
         # min_this_iteration = pop[0]
@@ -274,7 +288,7 @@ class TSPSolver:
         #         max_list.append(min_this_iteration)
         # average_cost = mean(sol.cost for sol in max_list)
         # if average_cost < (max_list[])
-        return pop[0].cost
+        # return pop[0].cost
 
     '''Takes population size, makes random solutions. 
         returns a list of TSPSolution objs'''
@@ -286,7 +300,7 @@ class TSPSolver:
             init_pop.append(TSPSolution(default_results['soln'].route))
         return init_pop
 
-    def mutateGene(self, tsp_soln, pop_size):
+    def mutateGene(self, tsp_soln, pop_size, ncities):
         soln = tsp_soln.route
 
         # Percentage of mutations performed on the solution
@@ -296,8 +310,8 @@ class TSPSolver:
         i = 0
         while i < num_of_mutations:
             # Randomly pick two cities
-            rand_num_1 = randint(0, pop_size-1)
-            rand_num_2 = randint(0, pop_size-1)
+            rand_num_1 = randint(0, ncities-1)
+            rand_num_2 = randint(0, ncities-1)
             if rand_num_1 != rand_num_2:
                 # Swap cities
                 soln[rand_num_1], soln[rand_num_2] = soln[rand_num_2], soln[rand_num_1]
@@ -308,7 +322,7 @@ class TSPSolver:
         results = TSPSolution(soln)
         return results.cost
 
-    def createNewPopulation(self, init_pop, pop_size, bssf, best_past):
+    def createNewPopulation(self, init_pop, pop_size, bssf, ncities):
         new_pop = []
 
         # To create a new population of equal size
@@ -317,11 +331,11 @@ class TSPSolver:
             # Mutate parent
             isFound = False
             while not isFound:
-                child_soln = self.mutateGene(parent, pop_size)
+                child_soln = self.mutateGene(parent, pop_size, ncities)
                 # Calculate Fitness
                 child_cost = self.calculateFitness(child_soln)
                 # Add the parent or the child with the better cost
-                if child_cost < parent.cost:
+                if child_cost <= parent.cost:
                     # Tuple of (cost, solution)
                     new_pop.append(TSPSolution(child_soln))
                     isFound = True
