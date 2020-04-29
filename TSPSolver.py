@@ -224,96 +224,157 @@ class TSPSolver:
     best solution found.  You may use the other three field however you like.
     algorithm</returns> 
     '''
+
     def fancy(self, time_allowance=60.0):
+        # Needed variables
         results = {}
         cities = self._scenario.getCities()
         ncities = len(cities)
         pop_size = 15
-
+        elite_size = int(pop_size / 2)
+        mutation_rate = 0.15
         generations = 50
-        population = self.initializePopulation(pop_size)
-        population.sort(key=lambda p: p.cost)
-        # TODO: use this or get rid of it
-        bssf = TSPSolution(population[0].route)
 
+        # Initialize population
+        population = self.initializePopulation(pop_size, ncities)
+
+        population.sort(key=lambda p: p.cost)
+        bssf = TSPSolution(population[0].route)
         start_time = time.time()
 
+        stagnant_generations = 0
+        prev_generation_leader = np.inf
         # The number of generations/iterations of the genetic algorithm
-        while time.time() - start_time < time_allowance:
-            population = self.createNewPopulation(population, pop_size, ncities, time_allowance, start_time)
-            # TODO: comment out for tests. The below statements are for debugging purposes.
-            print(len(population))
+        while stagnant_generations < 500 and time.time() - start_time < time_allowance:
+            # cull population back down to size.
+            population = self.cullPopulation(population, pop_size, elite_size)
+            # Make some chilluns
+            population = self.breedPopulation(population, elite_size)
+            # Mutate the population
+            self.mutatePopulation(population, pop_size, ncities, mutation_rate)
+            # Sort it again
             population.sort(key=lambda p: p.cost)
-            print(population[0].cost)
+            curr_leader = population[0].cost
+            if curr_leader < bssf.cost:
+                bssf = population[0]
+                stagnant_generations = 0
+            elif curr_leader == bssf.cost:
+                stagnant_generations += 1
+            elif curr_leader == prev_generation_leader:
+                stagnant_generations += 1
 
-        # Sort population by cost
-        population.sort(key=lambda p: p.cost)
+            prev_generation_leader = copy.copy(population[0].cost)
+            # print(stagnant_generations)
+            # comment out for trials. The below statements are for debugging purposes.
+            # print(len(population))
+            # population.sort(key=lambda p: p.cost)
+            # print(population[0].cost)
+
         end_time = time.time()
-        results['cost'] = population[0].cost
+        results['cost'] = bssf.cost
         results['time'] = end_time - start_time
         results['count'] = pop_size
-        results['soln'] = TSPSolution(population[0].route)
+        results['soln'] = bssf
         results['max'] = None
         results['total'] = None
         results['pruned'] = None
         return results
 
-    '''Takes population size, makes random solutions. 
-        returns a list of TSPSolution objs'''
-    def initializePopulation(self, pop_size):
+    '''The top elite will always survive. Then randomly choose some peeps to make babies.'''
+    def breedPopulation(self, pop, elites):
+        pop.sort(key=lambda p: p.cost)
+        length = len(pop) - elites
+        # Right now this is taking everybody. It shouldn't be taking everybody to the party.
+        forest_dwellers = random.sample(pop, len(pop))
+        survivors = []
+
+        # The best handful always get passed on.
+        for i in range(0, elites):
+            survivors.append(pop[i])
+
+        for i in range(0, length):
+            oops = self.mate(forest_dwellers[i], forest_dwellers[len(pop) - i - 1])
+            survivors.append(oops)
+
+        return survivors
+
+    '''take a random subset of cities from mom, and fill in the missing pieces from dad in the order they appear.
+    This is a special ritual called ordered crossover.'''
+    def mate(self, mom, dad):
+        final_product = []
+        moms_contribution = []
+        dads_contribution = []
+
+        # find two random indices
+        geneA = int(random.random() * len(mom.route))
+        geneB = int(random.random() * len(mom.route))
+        # figure out which is smaller
+        beginCity = min(geneA, geneB)
+        endCity = max(geneA, geneB)
+
+        # Start with a subset from mom
+        for i in range(beginCity, endCity):
+            moms_contribution.append(mom.route[i])
+        # Find the rest from dad
+        dads_contribution = [city for city in dad.route if city not in moms_contribution]
+
+        # put them together and build a TSP Solution
+        final_product = moms_contribution + dads_contribution
+        baby_solution = TSPSolution(final_product)
+        return baby_solution
+
+    '''Cull population back down to size.'''
+    def cullPopulation(self, pop, pop_size, elites):
+        culled_pop = []
+        pop.sort(key=lambda x: x.cost)
+        for i in range(0, elites):
+            culled_pop.append(pop[i])
+        # now choose some randos to fill in the extra space. They got lucky.
+        while len(culled_pop) < pop_size:
+            rando = randint(elites, len(pop) - 1)
+            if pop[rando] not in culled_pop:
+                culled_pop.append(pop[rando])
+        return culled_pop
+
+    '''Takes population size, makes random solutions.
+    The first elites are added to a new list, 
+    and then random entries are chosen to reach the desired list length'''
+
+    def initializePopulation(self, pop_size, ncities):
         init_pop = []
-        for i in range(pop_size):
+        culled_pop = []
+        for i in range(pop_size + ncities):
             default_results = self.defaultRandomTour()
-            # Tuple of (cost, solution) # TSPSolution object
+            # TSPSolution object
             init_pop.append(default_results['soln'])
         return init_pop
+
+    '''mutateGene is called if a solution is randomly selected to undergo mutation.'''
 
     def mutateGene(self, tsp_soln, ncities):
         soln = tsp_soln.route
 
-        # Percentage of mutations performed on the solution
-        mutation_rate = 0.20
-        # Number of mutations to make on the solution
-        num_of_mutations = np.ceil(ncities * mutation_rate)
-        i = 0
-        while i < num_of_mutations:
-            # Randomly pick two cities
-            rand_num_1 = randint(0, ncities-1)
-            rand_num_2 = randint(0, ncities-1)
-            if rand_num_1 != rand_num_2:
-                # Swap cities
-                soln[rand_num_1], soln[rand_num_2] = soln[rand_num_2], soln[rand_num_1]
-                i += 1
-        return soln
+        # Randomly pick two cities
+        rand_num_1 = randint(0, ncities - 1)
+        rand_num_2 = randint(0, ncities - 1)
+        if rand_num_1 != rand_num_2:
+            # Swap cities
+            soln[rand_num_1], soln[rand_num_2] = soln[rand_num_2], soln[rand_num_1]
+        mutated_soln = TSPSolution(soln)
+        return mutated_soln
 
-    def calculateFitness(self, soln):
-        results = TSPSolution(soln)
-        return results.cost
-
-    def createNewPopulation(self, init_pop, pop_size, ncities, time_allowance, start_time):
-        new_pop = []
-
-        # To create a new population of equal size
-        for i in range(pop_size):
-            if time.time() - start_time < time_allowance:
-                parent = init_pop[i]
-                # Mutate parent
-                new_child_route = self.mutateGene(parent, ncities)
-                child_soln = TSPSolution(new_child_route)
-                # Calculate Fitness
-                child_cost = child_soln.cost
-                # Add the parent or the child with the better cost
-                if child_cost < parent.cost:
-                    new_pop.append(child_soln)
-                else:
-                    new_pop.append(parent)
-            else:
-                return init_pop
-        return new_pop
+    def mutatePopulation(self, pop, pop_size, ncities, mutation_rate):
+        for i in range(1, pop_size):
+            # random.random() returns a random value between 0.0 and 1.0
+            my_rando = random.random()
+            if my_rando < mutation_rate:
+                # Mutate this entry
+                pop[i] = self.mutateGene(pop[i], ncities)
 
     ''' Use this method to calculate the edges of the graph. 
         Row is the source and cols are the edges.
     '''
+
     def calculateEdges(self, size):
         cities = self._scenario.getCities()
         distances = [[np.inf] * size for x in range(size)]
@@ -384,4 +445,3 @@ def reduce_cols(lower_bound, rcm, size):
             for i in range(size):
                 rcm[i][j] -= small_num
     return lower_bound
-
