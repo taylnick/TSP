@@ -277,12 +277,11 @@ class TSPSolver:
         returns a list of TSPSolution objs'''
     def initializePopulation(self, pop_size):
         init_pop = []
-        for i in range(pop_size*2):
+        for i in range(pop_size):
             default_results = self.defaultRandomTour()
             # Tuple of (cost, solution) # TSPSolution object
             init_pop.append(default_results['soln'])
-        init_pop.sort(key=lambda l: l.cost)
-        return init_pop[:pop_size]
+        return init_pop
 
     def mutateGene(self, tsp_soln, ncities):
         soln = tsp_soln.route
