@@ -217,14 +217,12 @@ class TSPSolver:
         return results
 
     ''' <summary>
-    This is the entry point for the algorithm you'll write for your group project.
-    </summary>
+    Genetic Algorithm implementation. Thanks to this article for help: https://towardsdatascience.com/evolution-of-a-salesman-a-complete-genetic-algorithm-tutorial-for-python-6fe5d2b3ca35    </summary>
     <returns>results dictionary for GUI that contains three ints: cost of best solution, 
     time spent to find best solution, total number of solutions found during search, the 
     best solution found.  You may use the other three field however you like.
     algorithm</returns> 
     '''
-
     def fancy(self, time_allowance=60.0):
         # Needed variables
         results = {}
@@ -232,20 +230,21 @@ class TSPSolver:
         ncities = len(cities)
         pop_size = 15
         elite_size = int(pop_size / 2)
+        count = 0
         mutation_rate = 0.15
-        generations = 50
 
         # Initialize population
         population = self.initializePopulation(pop_size, ncities)
 
         population.sort(key=lambda p: p.cost)
         bssf = TSPSolution(population[0].route)
+
         start_time = time.time()
 
         stagnant_generations = 0
         prev_generation_leader = np.inf
         # The number of generations/iterations of the genetic algorithm
-        while stagnant_generations < 500 and time.time() - start_time < time_allowance:
+        while time.time() - start_time < time_allowance:
             # cull population back down to size.
             population = self.cullPopulation(population, pop_size, elite_size)
             # Make some chilluns
@@ -254,26 +253,23 @@ class TSPSolver:
             self.mutatePopulation(population, pop_size, ncities, mutation_rate)
             # Sort it again
             population.sort(key=lambda p: p.cost)
+
             curr_leader = population[0].cost
             if curr_leader < bssf.cost:
                 bssf = population[0]
                 stagnant_generations = 0
+                count += 1
             elif curr_leader == bssf.cost:
                 stagnant_generations += 1
             elif curr_leader == prev_generation_leader:
                 stagnant_generations += 1
 
             prev_generation_leader = copy.copy(population[0].cost)
-            # print(stagnant_generations)
-            # comment out for trials. The below statements are for debugging purposes.
-            # print(len(population))
-            # population.sort(key=lambda p: p.cost)
-            # print(population[0].cost)
 
         end_time = time.time()
         results['cost'] = bssf.cost
         results['time'] = end_time - start_time
-        results['count'] = pop_size
+        results['count'] = count
         results['soln'] = bssf
         results['max'] = None
         results['total'] = None
@@ -342,8 +338,7 @@ class TSPSolver:
 
     def initializePopulation(self, pop_size, ncities):
         init_pop = []
-        culled_pop = []
-        for i in range(pop_size + ncities):
+        for i in range(pop_size):
             default_results = self.defaultRandomTour()
             # TSPSolution object
             init_pop.append(default_results['soln'])
@@ -366,8 +361,7 @@ class TSPSolver:
     def mutatePopulation(self, pop, pop_size, ncities, mutation_rate):
         for i in range(1, pop_size):
             # random.random() returns a random value between 0.0 and 1.0
-            my_rando = random.random()
-            if my_rando < mutation_rate:
+            if random.random() < mutation_rate:
                 # Mutate this entry
                 pop[i] = self.mutateGene(pop[i], ncities)
 
