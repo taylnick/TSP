@@ -229,22 +229,22 @@ class TSPSolver:
         cities = self._scenario.getCities()
         ncities = len(cities)
         pop_size = 15
-        past_gen_maxes = [5]
 
         generations = 50
         population = self.initializePopulation(pop_size)
         population.sort(key=lambda p: p.cost)
         # TODO: use this or get rid of it
         bssf = TSPSolution(population[0].route)
-        past_gen_maxes.append(bssf)
+
         start_time = time.time()
 
         # The number of generations/iterations of the genetic algorithm
-        still_improving = True
-        while still_improving and time.time() - start_time < time_allowance:
-            population = self.createNewPopulation(population, pop_size, ncities, bssf, past_gen_maxes, time_allowance, start_time)
-            # min_cost = min(population, key=attrgetter('cost'))
-            still_improving = self.is_improving(population, past_gen_maxes)
+        while time.time() - start_time < time_allowance:
+            population = self.createNewPopulation(population, pop_size, ncities, time_allowance, start_time)
+            # TODO: comment out for tests. The below statements are for debugging purposes.
+            print(len(population))
+            population.sort(key=lambda p: p.cost)
+            print(population[0].cost)
 
         # Sort population by cost
         population.sort(key=lambda p: p.cost)
@@ -257,21 +257,6 @@ class TSPSolver:
         results['total'] = None
         results['pruned'] = None
         return results
-
-    def is_improving(self, pop, max_list):
-
-        # pop.sort(key=lambda p: p.cost)
-        # min_this_iteration = pop[0]
-        # if len(max_list) < 5:
-        #     max_list.append(min_this_iteration)
-        # else:
-        #     max_list.sort(key=lambda l: l.cost)
-        #     if min_this_iteration.cost < max_list[-1].cost:
-        #         max_list.pop(-1)
-        #         max_list.append(min_this_iteration)
-        # average_cost = mean(sol.cost for sol in max_list)
-        # if average_cost < (max_list[])
-        return pop[0].cost
 
     '''Takes population size, makes random solutions. 
         returns a list of TSPSolution objs'''
@@ -305,7 +290,7 @@ class TSPSolver:
         results = TSPSolution(soln)
         return results.cost
 
-    def createNewPopulation(self, init_pop, pop_size, ncities, bssf, best_past, time_allowance, start_time):
+    def createNewPopulation(self, init_pop, pop_size, ncities, time_allowance, start_time):
         new_pop = []
 
         # To create a new population of equal size
@@ -313,19 +298,15 @@ class TSPSolver:
             if time.time() - start_time < time_allowance:
                 parent = init_pop[i]
                 # Mutate parent
-                isFound = False
-                while not isFound:
-                    if time.time() - start_time < time_allowance:
-                        new_child_route = self.mutateGene(parent, ncities)
-                        child_soln = TSPSolution(new_child_route)
-                        # Calculate Fitness
-                        child_cost = child_soln.cost
-                        # Add the parent or the child with the better cost
-                        if child_cost < parent.cost:
-                            new_pop.append(child_soln)
-                            isFound = True
-                    else:
-                        break
+                new_child_route = self.mutateGene(parent, ncities)
+                child_soln = TSPSolution(new_child_route)
+                # Calculate Fitness
+                child_cost = child_soln.cost
+                # Add the parent or the child with the better cost
+                if child_cost < parent.cost:
+                    new_pop.append(child_soln)
+                else:
+                    new_pop.append(parent)
             else:
                 return init_pop
         return new_pop
