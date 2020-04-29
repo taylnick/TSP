@@ -246,9 +246,6 @@ class TSPSolver:
             # min_cost = min(population, key=attrgetter('cost'))
             still_improving = self.is_improving(population, past_gen_maxes)
 
-
-
-
         # Sort population by cost
         population.sort(key=lambda p: p.cost)
         end_time = time.time()
@@ -283,7 +280,7 @@ class TSPSolver:
         for i in range(pop_size*2):
             default_results = self.defaultRandomTour()
             # Tuple of (cost, solution) # TSPSolution object
-            init_pop.append(TSPSolution(default_results['soln'].route))
+            init_pop.append(default_results['soln'])
         init_pop.sort(key=lambda l: l.cost)
         return init_pop[:pop_size]
 
