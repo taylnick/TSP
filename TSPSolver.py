@@ -243,12 +243,11 @@ class TSPSolver:
         # The number of generations/iterations of the genetic algorithm
         still_improving = True
         while still_improving and time.time() - start_time < time_allowance:
-            population = self.createNewPopulation(population, pop_size, bssf, ncities)
-            # min_cost = min(population, key=attrgetter('cost'))
+            population = self.createNewPopulation(population, pop_size, bssf, ncities, time_allowance, start_time)
+            population.sort(key=lambda p: p.cost)
+            bssf = TSPSolution(population[0].route)
+            print(bssf.cost)
             still_improving = self.is_improving(population, past_best, deltas)
-
-
-
 
         # Sort population by cost
         population.sort(key=lambda p: p.cost)
@@ -269,10 +268,12 @@ class TSPSolver:
             max_list.remove(np.inf)
             max_list.append(pop[0])
             return True
-        max_list.sort(key=lambda x: x.cost)
+
         delta = (max_list[-1].cost - pop[0].cost) / pop[0].cost
+        max_list.remove(0)
+        max_list.append(pop[0])
         deltas.append(delta)
-        if sum(deltas[-3:]) > .3:
+        if sum(deltas[-3:]) > .1:
             return True
         else:
             return False
@@ -297,7 +298,7 @@ class TSPSolver:
         for i in range(pop_size):
             default_results = self.defaultRandomTour()
             # Tuple of (cost, solution) # TSPSolution object
-            init_pop.append(TSPSolution(default_results['soln'].route))
+            init_pop.append(default_results['soln'])
         return init_pop
 
     def mutateGene(self, tsp_soln, pop_size, ncities):
@@ -306,7 +307,7 @@ class TSPSolver:
         # Percentage of mutations performed on the solution
         mutation_rate = 0.2
         # Number of mutations to make on the solution
-        num_of_mutations = np.ceil(pop_size * mutation_rate)
+        num_of_mutations = np.ceil(ncities * mutation_rate)
         i = 0
         while i < num_of_mutations:
             # Randomly pick two cities
@@ -322,23 +323,37 @@ class TSPSolver:
         results = TSPSolution(soln)
         return results.cost
 
-    def createNewPopulation(self, init_pop, pop_size, bssf, ncities):
+    def createNewPopulation(self, init_pop, pop_size, bssf, ncities, time_allowance, start_time):
         new_pop = []
 
         # To create a new population of equal size
         for i in range(pop_size):
-            parent = init_pop[i]
-            # Mutate parent
-            isFound = False
-            while not isFound:
-                child_soln = self.mutateGene(parent, pop_size, ncities)
-                # Calculate Fitness
-                child_cost = self.calculateFitness(child_soln)
-                # Add the parent or the child with the better cost
-                if child_cost <= parent.cost:
-                    # Tuple of (cost, solution)
-                    new_pop.append(TSPSolution(child_soln))
-                    isFound = True
+            if time.time() - start_time < time_allowance:
+                parent = init_pop[i]
+                # Mutate parent
+                isFound = False
+                counter = 0
+                while not isFound:
+                    if time.time() - start_time < time_allowance:
+                        if counter >= 15:
+                            new_pop.append(parent)
+                            counter = 0
+                        else:
+                            child_soln = self.mutateGene(parent, pop_size, ncities)
+                            # Calculate Fitness
+                            child_cost = self.calculateFitness(child_soln)
+                            # Add the parent or the child with the better cost
+                            if child_cost <= parent.cost:
+                                # Tuple of (cost, solution)
+                                new_pop.append(TSPSolution(child_soln))
+                                isFound = True
+                                counter = 0
+                            else:
+                                counter += 1
+                    else:
+                        break
+            else:
+                return init_pop
         return new_pop
 
     ''' Use this method to calculate the edges of the graph. 
