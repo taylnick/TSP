@@ -234,7 +234,10 @@ class TSPSolver:
         mutation_rate = 0.15
 
         # Initialize population
-        population = self.initializePopulation(pop_size, ncities)
+        if ncities < 50:
+            population = self.initializePopulation(pop_size)
+        else:
+            population = self.initializeLargePopulation(pop_size, ncities)
 
         population.sort(key=lambda p: p.cost)
         bssf = TSPSolution(population[0].route)
@@ -244,7 +247,7 @@ class TSPSolver:
         stagnant_generations = 0
         prev_generation_leader = np.inf
         # The number of generations/iterations of the genetic algorithm
-        while  stagnant_generations < 500 and time.time() - start_time < time_allowance:
+        while stagnant_generations < 20000 and time.time() - start_time < time_allowance:
             # cull population back down to size.
             population = self.cullPopulation(population, pop_size, elite_size)
             # Make some chilluns
@@ -255,14 +258,17 @@ class TSPSolver:
             population.sort(key=lambda p: p.cost)
 
             curr_leader = population[0].cost
-            if curr_leader < bssf.cost:
-                bssf = population[0]
+            if curr_leader < np.inf:
+                if curr_leader < bssf.cost:
+                    bssf = population[0]
+                    stagnant_generations = 0
+                    count += 1
+                elif curr_leader == bssf.cost:
+                    stagnant_generations += 1
+                elif curr_leader == prev_generation_leader:
+                    stagnant_generations += 1
+            else:
                 stagnant_generations = 0
-                count += 1
-            elif curr_leader == bssf.cost:
-                stagnant_generations += 1
-            elif curr_leader == prev_generation_leader:
-                stagnant_generations += 1
 
             prev_generation_leader = copy.copy(population[0].cost)
 
@@ -336,7 +342,7 @@ class TSPSolver:
     The first elites are added to a new list, 
     and then random entries are chosen to reach the desired list length'''
 
-    def initializePopulation(self, pop_size, ncities):
+    def initializePopulation(self, pop_size):
         init_pop = []
         for i in range(pop_size):
             default_results = self.defaultRandomTour()
@@ -344,7 +350,34 @@ class TSPSolver:
             init_pop.append(default_results['soln'])
         return init_pop
 
+    def initializeLargePopulation(self, pop_size, ncities):
+        init_pop = []
+        half = int(ncities/2) - 1
+        # for i in range(3):
+        #     default_results = self.defaultRandomTour()
+        #     # TSPSolution object
+        #     init_pop.append(default_results['soln'])
+        greedy_results = self.greedy()
+
+        init_pop.append(greedy_results['soln'])
+        while len(init_pop) < pop_size:
+            perm = self.randomPerm()
+            init_pop.append(perm)
+        return init_pop
     '''mutateGene is called if a solution is randomly selected to undergo mutation.'''
+
+    def randomPerm(self, time_allowance=60.0):
+        cities = self._scenario.getCities()
+        ncities = len(cities)
+        bssf = None
+        # create a random permutation
+        perm = np.random.permutation(ncities)
+        route = []
+        # Now build the route using the random permutation
+        for i in range(ncities):
+            route.append(cities[perm[i]])
+        bssf = TSPSolution(route)
+        return bssf
 
     def mutateGene(self, tsp_soln, ncities):
         soln = tsp_soln.route
